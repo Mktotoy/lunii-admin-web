@@ -12,9 +12,14 @@ import {
   syncPacksMetadataFromStore,
 } from "./utils/lunii/packs";
 import { PackMetadata } from "./utils/lunii/types";
+import { getDeviceInfo } from "./utils/lunii/device";
 
-export const useGetPacksQuery = () =>
-  useQuery(["packs"], () => getPacksMetadata(state.luniiHandle.peek()!));
+export const useGetPacksQuery = () => {
+  const luniiHandle = state.luniiHandle.use();
+  return useQuery(["packs"], () => getPacksMetadata(luniiHandle!), {
+    enabled: !!luniiHandle,
+  });
+};
 
 export const useReorderPackMutation = () => {
   const client = useQueryClient();
@@ -145,5 +150,60 @@ export const useSavePackMetadataMutation = () => {
       const deviceHandle = state.luniiHandle.peek()!;
       await savePackMetadata(deviceHandle, uuid, metadata, shouldCreate);
     },
+  });
+};
+
+export const useGetPackResourcesQuery = (uuid: string) => {
+  const luniiHandle = state.luniiHandle.use();
+  return useQuery(["pack-resources", uuid], () => {
+    if (!luniiHandle) return null;
+    return import("./utils/lunii/packs").then(m => m.getPackResources(luniiHandle, uuid));
+  }, { enabled: !!luniiHandle });
+};
+
+export const useGetPackRasterQuery = (uuid: string, rasterName: string) => {
+  const luniiHandle = state.luniiHandle.use();
+  return useQuery(["pack-raster", uuid, rasterName], () => {
+    if (!luniiHandle) return null;
+    return import("./utils/lunii/packs").then(m => m.getPackRaster(luniiHandle, uuid, rasterName));
+  }, { enabled: !!luniiHandle && !!rasterName });
+};
+
+export const useGetDeviceStorageUsageQuery = () => {
+  const luniiHandle = state.luniiHandle.use();
+  return useQuery(["storage-usage"], () => {
+    if (!luniiHandle) return 0;
+    return import("./utils/lunii/packs").then(m => m.getDeviceStorageUsage(luniiHandle));
+  }, { enabled: !!luniiHandle });
+};
+
+export const useGetDeviceInfoQuery = () => {
+  const luniiHandle = state.luniiHandle.use();
+  return useQuery(["device-info"], () => getDeviceInfo(luniiHandle!), {
+    enabled: !!luniiHandle,
+  });
+};
+
+export const useGetOfficialThumbnailQuery = (url: string | undefined) => {
+  return useQuery(["official-thumbnail", url], async () => {
+    if (!url) return null;
+    const { getGuestToken } = await import("./utils/db");
+    const token = await getGuestToken();
+
+    // Determine if we need to add the proxy prefix
+    let finalUrl = url;
+    if (!url.includes("corsproxy.io")) {
+      finalUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    }
+
+    const response = await fetch(finalUrl, {
+      headers: { "X-AUTH-TOKEN": token },
+    });
+    if (!response.ok) throw new Error("Failed to fetch thumbnail");
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  }, {
+    enabled: !!url && (url.includes("corsproxy.io") || url.includes("storage.googleapis.com")),
+    staleTime: Infinity,
   });
 };

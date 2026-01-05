@@ -156,7 +156,7 @@ export const syncPacksMetadataFromStore = async (
   const packs = await getPacksMetadata(luniHandle);
 
   packs.forEach(async (pack) => {
-    if (pack.metadata && pack.metadata.title) return;
+    if (pack.metadata && pack.metadata.title && pack.metadata.image) return;
 
     const entry = luniiStoreEntries.find((entry) => entry.uuid === pack.uuid);
     if (!entry) return;
@@ -167,29 +167,57 @@ export const syncPacksMetadataFromStore = async (
       uuid: entry.uuid,
       ref: uuidToRef(entry.uuid),
       packType: "lunii",
+      image: entry.thumbnailUrl,
     };
 
     await savePackMetadata(luniHandle, pack.uuid, metadata, true);
   });
 };
 
-export const getPackFirstRaster = async (
+export const getPackResources = async (
   handle: FileSystemDirectoryHandle,
   uuid: string
 ) => {
   const ref = uuidToRef(uuid);
-  const riHandle = await getFileHandleFromPath(handle, `.content/${ref}/ri`);
-  const ri = await riHandle
-    .getFile()
-    .then((f) => f.arrayBuffer())
-    .then((ab) => new Uint8Array(ab));
-  const decodedRi = await decryptFirstBlock(ri, decryptXxtea(v2CommonKey));
-  const fistRasterAdress = new TextDecoder()
-    .decode(decodedRi.slice(0, 12))
-    .replace("\\", "/");
+  const resources = {
+    rasters: [] as { name: string; position: number }[],
+    audio: [] as { name: string; position: number }[],
+  };
+
+  try {
+    const rfDir: any = await getFileHandleFromPath(handle, `.content/${ref}/rf/000`).catch(() => null);
+    if (rfDir && rfDir.kind === "directory") {
+      for await (const entry of rfDir.values()) {
+        if ((entry as any).kind === "file") {
+          resources.rasters.push({ name: entry.name, position: parseInt(entry.name) });
+        }
+      }
+    }
+
+    const sfDir: any = await getFileHandleFromPath(handle, `.content/${ref}/sf/000`).catch(() => null);
+    if (sfDir && sfDir.kind === "directory") {
+      for await (const entry of sfDir.values()) {
+        if ((entry as any).kind === "file") {
+          resources.audio.push({ name: entry.name, position: parseInt(entry.name) });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to list pack resources", e);
+  }
+
+  return resources;
+};
+
+export const getPackRaster = async (
+  handle: FileSystemDirectoryHandle,
+  uuid: string,
+  rasterName: string
+) => {
+  const ref = uuidToRef(uuid);
   const rasterFile = await getFileHandleFromPath(
     handle,
-    `.content/${ref}/rf/${fistRasterAdress}`
+    `.content/${ref}/rf/000/${rasterName}`
   );
   const raster = await rasterFile
     .getFile()
@@ -197,4 +225,64 @@ export const getPackFirstRaster = async (
     .then((ab) => new Uint8Array(ab));
 
   return decryptFirstBlock(raster, decryptXxtea(v2CommonKey));
+};
+
+export const getPackFirstRaster = async (
+  handle: FileSystemDirectoryHandle,
+  uuid: string
+) => {
+  const ref = uuidToRef(uuid);
+  const riHandle = await getFileHandleFromPath(handle, `.content/${ref}/ri`).catch(() => null);
+  if (!riHandle) return null;
+
+  const ri = await (riHandle as FileSystemFileHandle)
+    .getFile()
+    .then((f) => f.arrayBuffer())
+    .then((ab) => new Uint8Array(ab));
+  const decodedRi = await decryptFirstBlock(ri, decryptXxtea(v2CommonKey));
+  const fistRasterAdress = new TextDecoder()
+    .decode(decodedRi.slice(0, 12))
+    .replace("\\", "/");
+
+  // Address is usually like "000\00000000"
+  const parts = fistRasterAdress.split(/[\\/]/);
+  const rasterName = parts[parts.length - 1].trim();
+
+  const rasterFile = await getFileHandleFromPath(
+    handle,
+    `.content/${ref}/rf/000/${rasterName}`
+  ).catch(() => null);
+
+  if (!rasterFile) return null;
+
+  const raster = await (rasterFile as FileSystemFileHandle)
+    .getFile()
+    .then((f) => f.arrayBuffer())
+    .then((ab) => new Uint8Array(ab));
+
+  return decryptFirstBlock(raster, decryptXxtea(v2CommonKey));
+};
+
+export const getDeviceStorageUsage = async (handle: FileSystemDirectoryHandle) => {
+  let totalSize = 0;
+
+  async function calculateSize(dirHandle: FileSystemDirectoryHandle) {
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === "file") {
+        const file = await entry.getFile();
+        totalSize += file.size;
+      } else {
+        await calculateSize(entry);
+      }
+    }
+  }
+
+  try {
+    const contentHandle = await handle.getDirectoryHandle(".content");
+    await calculateSize(contentHandle);
+  } catch (e) {
+    console.warn("Could not calculate storage usage", e);
+  }
+
+  return totalSize;
 };

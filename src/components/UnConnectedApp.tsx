@@ -1,41 +1,46 @@
-import { Alert, Badge, Button, Center, Container, Text } from "@mantine/core";
+import { Alert, Button, Center, Container, Text, Title, Stack, Box, Group } from "@mantine/core";
 import { getLuniiHandle } from "../utils";
 import { getDeviceInfo } from "../utils/lunii/deviceInfo";
 import { state } from "../store";
-import { IconFolderOpen } from "@tabler/icons-react";
+import { IconFolderOpen, IconHeartFilled, IconAward } from "@tabler/icons-react";
 
 export const UnconnectedApp = () => {
   return (
-    <Container h="80vh">
-      <Center h="100%" style={{ flexDirection: "column" }}>
-        <Badge mb={20}>{__COMMIT_HASH__}</Badge>
-        <Text mb={20}>
-          Pour utiliser Lunii Admin Web il faut donner les permissions au
-          navigateur d'accéder à votre appareil.
-        </Text>
+    <Container size="sm" h="90vh">
+      <Center h="100%">
+        <Box className="glass" p={40} style={{ textAlign: 'center', width: '100%' }}>
+          <Stack spacing="xl" align="center">
+            <Title order={1} size={42} style={{ letterSpacing: -2 }}>
+              LUNII<span style={{ color: 'var(--accent-color)' }}>ADMIN</span>
+            </Title>
 
-        <Button
-          mb="xl"
-          leftIcon={<IconFolderOpen size="1rem" />}
-          onClick={async () => {
-            const handle = await getLuniiHandle();
-            if (!handle) return;
+            <Text size="lg" opacity={0.8} style={{ maxWidth: 400 }}>
+              Pour commencer l'aventure, autorisez votre navigateur à accéder à votre Lunii.
+            </Text>
 
-            const device = await getDeviceInfo(handle);
+            <Button
+              size="xl"
+              radius="md"
+              leftIcon={<IconFolderOpen size="1.2rem" />}
+              onClick={async () => {
+                const handle = await getLuniiHandle();
+                if (!handle) return;
+                const device = await getDeviceInfo(handle);
+                await state.device.set(device);
+                await state.luniiHandle.set(handle);
+              }}
+              style={{ paddingLeft: 40, paddingRight: 40 }}
+            >
+              Ouvrir ma Lunii
+            </Button>
 
-            await state.device.set(device);
-            await state.luniiHandle.set(handle);
-          }}
-        >
-          Ouvrir ma Lunii
-        </Button>
-        <Alert my="lg" radius="md" p="xl">
-          <Text mb="md">🔨 Créé par Olup</Text>
-          <Text mb="sm">Rendu possible grace au travail incroyable de </Text>
-          <Text>🥇 R. Daneel Olivaw</Text>
-          <Text>🥇 Frederir</Text>
-          <Text mb="md"> ❤️ Et tout le support de la communauté Lunii</Text>
-        </Alert>
+            <Alert color="blue" variant="light" radius="md" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Stack spacing="xs">
+                <Text size="sm" weight={600}>Crée par Mktotoy sur reprise des projet de Olup</Text>
+              </Stack>
+            </Alert>
+          </Stack>
+        </Box>
       </Center>
     </Container>
   );

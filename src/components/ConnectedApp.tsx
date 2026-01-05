@@ -1,31 +1,45 @@
-import { Center, Container, Loader, Space, Text } from "@mantine/core";
-import { useGetPacksQuery } from "../queries";
+import { Center, Container, Loader, Text, Stack } from "@mantine/core";
+import { useGetPacksQuery, useReorderPackMutation } from "../queries";
 import { state } from "../store";
 import { Header } from "./Header";
 import { InstallModal } from "./InstallModal";
 import { Pack } from "./Pack";
+import { PackShell } from "../utils/lunii/packs";
 
 export const ConnectedApp = () => {
   const isFfmpegLoaded = state.isFfmpegLoaded.use();
 
-  const { data } = useGetPacksQuery();
+  const { data: packList } = useGetPacksQuery();
+  const { mutate: movePack } = useReorderPackMutation();
 
   if (!isFfmpegLoaded)
     return (
       <Center h={400} style={{ flexDirection: "column" }}>
-        <Text mb={20}>Encore un instant pour charger les dépendances...</Text>
-        <Loader />
+        <Text mb={20} weight={500}>Chargement de l'environnement créatif...</Text>
+        <Loader variant="dots" size="xl" />
       </Center>
     );
 
   return (
     <>
-      <Container>
+      <Container size="md">
         <Header />
-        <Space h={10} />
-        {data?.map((pack, i) => (
-          <Pack key={pack.uuid} pack={pack} position={i} />
-        ))}
+        <Stack spacing="lg">
+          {packList?.map((pack: PackShell, i: number) => (
+            <Pack
+              key={pack.uuid}
+              pack={pack}
+              index={i}
+              onReorder={(from, to) => movePack({ from, to })}
+            />
+          ))}
+        </Stack>
+
+        {packList?.length === 0 && (
+          <Center h={200}>
+            <Text opacity={0.5}>Aucun pack trouvé sur votre Lunii.</Text>
+          </Center>
+        )}
       </Container>
       <InstallModal />
     </>

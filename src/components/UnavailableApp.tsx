@@ -1,40 +1,39 @@
-import { Alert, Badge, Box, Center, Code, Text } from "@mantine/core";
+import { Alert, Box, Center, Code, Text, Title, Stack, Container } from "@mantine/core";
 import { useUserAgent } from "@oieduardorabelo/use-user-agent";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 
 export const UnavailableApp = () => {
   const details = useUserAgent();
   return (
-    <Center h={500}>
-      <Box>
-        <Badge mb={20}>{__COMMIT_HASH__}</Badge>
-        <Text>Votre navigateur n'est pas compatible avec cette app.</Text>
-        <Text>
-          Essayez avec la dernière versio de Chrome, Edge, Brave ou Opera sur
-          desktop.
-        </Text>
-        {details?.browser?.name === "Chrome" && (
-          <Alert mt={20} icon={<IconInfoCircle />}>
-            <Text>
-              Vous utilisez <b>Brave Browser</b> ?
+    <Container size="sm" h="90vh">
+      <Center h="100%">
+        <Box className="glass" p={40} style={{ width: '100%', textAlign: 'center' }}>
+          <Stack spacing="xl">
+            <IconAlertCircle size="4rem" color="orange" style={{ margin: '0 auto' }} />
+            <Title order={2}>Navigateur non compatible</Title>
+            <Text opacity={0.8}>
+              Désolé, votre navigateur actuel ne supporte pas l'accès direct aux fichiers requis pour Lunii Admin.
             </Text>
-            <Text>
-              Vous pouvez utiliser Lunii Admin Web en activant{" "}
-              <b>Filesystem Access Api</b> dans les Flags Brave :
+            <Text weight={500}>
+              Veuillez utiliser la dernière version de Chrome, Edge, Brave ou Opera sur ordinateur.
             </Text>
-            <Text>
-              <ul>
-                <li>
-                  Tappez <Code>brave://flags/#file-system-access-api</Code> dans
-                  votre barre d'url
-                </li>
-                <li>Activez le flag</li>
-                <li>Rechargez Brave</li>
-              </ul>
-            </Text>
-          </Alert>
-        )}
-      </Box>
-    </Center>
+
+            {details?.browser?.name === "Chrome" && (
+              <Alert mt={20} color="orange" variant="light" radius="md" style={{ textAlign: 'left' }}>
+                <Text weight={700} mb="xs">Note pour les utilisateurs de Brave :</Text>
+                <Text size="sm">
+                  Activez le flag <b>Filesystem Access Api</b> pour faire fonctionner l'application :
+                </Text>
+                <Box component="ul" mt="xs">
+                  <li>Allez sur <Code>brave://flags/#file-system-access-api</Code></li>
+                  <li>Passez l'option sur <b>Enabled</b></li>
+                  <li>Redémarrez votre navigateur</li>
+                </Box>
+              </Alert>
+            )}
+          </Stack>
+        </Box>
+      </Center>
+    </Container>
   );
 };

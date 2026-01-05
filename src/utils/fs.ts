@@ -18,8 +18,7 @@ export async function getFileHandleFromPath(
       });
     } catch (error) {
       throw new Error(
-        `Error getting or creating directory handle for "${part}": ${
-          (error as Error).message
+        `Error getting or creating directory handle for "${part}": ${(error as Error).message
         }`
       );
     }
@@ -29,8 +28,7 @@ export async function getFileHandleFromPath(
     return currentHandle.getFileHandle(fileName, { create: createIfNotExists });
   } catch (error) {
     throw new Error(
-      `Error creating or writing to file "${filePath}": ${
-        (error as Error).message
+      `Error creating or writing to file "${filePath}": ${(error as Error).message
       }`
     );
   }
@@ -40,6 +38,10 @@ export const getRootDirectory = () => navigator.storage.getDirectory();
 
 export const readFileAsText = (file: FileSystemFileHandle) => {
   return file.getFile().then((file) => file.text());
+};
+
+export const readFileAsArrayBuffer = (file: FileSystemFileHandle) => {
+  return file.getFile().then((file) => file.arrayBuffer());
 };
 
 export const writeFile = async (

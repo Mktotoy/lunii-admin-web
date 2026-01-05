@@ -75,3 +75,40 @@ export async function convertAudioToMP3(inputFile: File): Promise<Uint8Array> {
 
   return data;
 }
+// rework audio: normalize, pad with silence, and ensure 44.1k mono
+export async function reworkAudio(inputFile: File): Promise<File> {
+  await ffmpeg.FS("writeFile", inputFile.name, await fetchFile(inputFile));
+
+  // -af "loudnorm=I=-20:TP=-3:LRA=7" for EBU R128 normalization
+  // -af "adelay=400|400" adds 400ms silence at start
+  // -af "apad=pad_len=17640" adds 400ms silence at end (for 44.1kHz)
+  // Combine them:
+  await ffmpeg
+    .run(
+      "-i",
+      inputFile.name,
+      "-af",
+      "loudnorm=I=-20:TP=-3:LRA=7,adelay=400|400,apad=pad_len=17640",
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      "-b:a",
+      "64k",
+      "-map_metadata",
+      "-1",
+      "reworked.mp3"
+    )
+    .catch((e) => {
+      console.error(e);
+      throw e;
+    });
+
+  const data = (await ffmpeg.FS("readFile", "reworked.mp3")) as Uint8Array;
+
+  // cleaning
+  await ffmpeg.FS("unlink", inputFile.name);
+  await ffmpeg.FS("unlink", "reworked.mp3");
+
+  return new File([data as any], inputFile.name, { type: "audio/mpeg" });
+}

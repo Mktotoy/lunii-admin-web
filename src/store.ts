@@ -18,6 +18,7 @@ export const state = observable({
 
   isFfmpegLoaded: false,
   colorScheme: "light" as "light" | "dark",
+  currentTab: "dashboard" as "dashboard" | "studio" | "explorer" | "settings" | "music_album",
 
   installation: {
     isInstalling: false,
